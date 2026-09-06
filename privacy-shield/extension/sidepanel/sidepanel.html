@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>PrivacyShield Side Panel</title>
+  <link rel="stylesheet" href="sidepanel.css" />
+</head>
+<body>
+  <div class="panel-container">
+    <!-- Header -->
+    <header class="header">
+      <div class="header-main">
+        <div class="logo-shield">🛡️</div>
+        <div>
+          <h1 class="logo-title">PrivacyShield</h1>
+          <p class="logo-sub">On-Device Visual Perception Agent</p>
+        </div>
+      </div>
+      <span class="sih-badge">SIH 26171</span>
+    </header>
+
+    <!-- Guarantee Banner -->
+    <div class="privacy-banner">
+      <span class="banner-tag">LOCAL TIER</span>
+      <span class="banner-text">Raw PII Never Leaves Your Device</span>
+    </div>
+
+    <!-- Quick Action: Capture & Redact -->
+    <section class="section">
+      <button id="captureRedactBtn" class="btn-primary-gradient">
+        📸 Capture & Redact Current Tab
+      </button>
+
+      <!-- Before / After Preview Card -->
+      <div id="previewCard" class="preview-card hidden">
+        <div class="preview-header">
+          <div class="preview-tabs">
+            <button id="tabRedacted" class="preview-tab active">Sanitized (Sent to Cloud)</button>
+            <button id="tabOriginal" class="preview-tab">Original (On-Device)</button>
+          </div>
+          <span id="previewTag" class="preview-pill">Zero Leakage</span>
+        </div>
+
+        <div class="preview-img-container">
+          <img id="previewImage" class="preview-img" alt="Screenshot preview" />
+        </div>
+      </div>
+    </section>
+
+    <!-- Autonomous Agent Execution Section -->
+    <section class="section">
+      <label class="input-label" for="taskInput">Agent Goal / Objective</label>
+      <input 
+        id="taskInput" 
+        type="text" 
+        class="task-input" 
+        placeholder="e.g. Transfer ₹5,000 to Rohan Verma" 
+        value="Transfer ₹5,000 to Rohan Verma"
+      />
+
+      <!-- Quick Preset Chips -->
+      <div class="presets-row">
+        <button type="button" class="preset-chip" data-task="Transfer ₹5,000 to Rohan Verma">₹5,000 Transfer</button>
+        <button type="button" class="preset-chip" data-task="Submit KYC Verification">Update KYC</button>
+        <button type="button" class="preset-chip" data-task="Pay credit card statement bill">Pay Card Bill</button>
+      </div>
+
+      <div class="agent-actions">
+        <button id="startAgentBtn" class="btn-agent-start">▶ Start Agent</button>
+        <button id="stopAgentBtn" class="btn-agent-stop hidden">⏹ Stop Agent</button>
+      </div>
+    </section>
+
+    <!-- Real-time Telemetry Card -->
+    <section class="section">
+      <div class="telemetry-card">
+        <div class="telemetry-header">
+          <span>On-Device Perception Telemetry</span>
+          <span id="agentStatusBadge" class="status-badge idle">Idle</span>
+        </div>
+
+        <div class="metrics-grid">
+          <div class="metric-box">
+            <div class="metric-num" id="metricDomPii">0</div>
+            <div class="metric-lbl">PII Masked</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-num" id="metricFaces">0</div>
+            <div class="metric-lbl">Faces Blurred</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-num" id="metricLatency">0 ms</div>
+            <div class="metric-lbl">Local Latency</div>
+          </div>
+          <div class="metric-box">
+            <div class="metric-num zero-leak" id="metricLeakage">0 Bytes</div>
+            <div class="metric-lbl">Cloud Leakage</div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+    <!-- Activity Log -->
+    <section class="section log-section">
+      <div class="log-header">Autonomous Agent Activity Log</div>
+      <div id="logList" class="log-list">
+        <div class="log-item">
+          <span class="log-time">Ready</span>
+          <span class="log-text">Click "Capture & Redact" or "Start Agent" to begin.</span>
+        </div>
+      </div>
+    </section>
+  </div>
+
+  <script src="privacy-engine.js"></script>
+  <script src="sidepanel.js"></script>
+</body>
+</html>

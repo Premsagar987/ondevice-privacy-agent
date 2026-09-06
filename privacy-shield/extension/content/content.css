@@ -1,0 +1,61 @@
+/* PrivacyShield — In-Page Visual Feedback Overlay */
+.privacyshield-target-highlight {
+  outline: 3px solid #3b82f6 !important;
+  outline-offset: 3px !important;
+  box-shadow: 0 0 20px rgba(59, 130, 246, 0.6) !important;
+  transition: all 0.2s ease-in-out !important;
+  position: relative !important;
+}
+
+.privacyshield-action-badge {
+  position: absolute;
+  top: -24px;
+  left: 0;
+  background: #2563eb;
+  color: #ffffff;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 11px;
+  font-weight: 700;
+  padding: 3px 8px;
+  border-radius: 4px;
+  z-index: 2147483647;
+  pointer-events: none;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.4);
+  white-space: nowrap;
+  animation: privacyshield-fadein 0.2s ease-out;
+}
+
+@keyframes privacyshield-fadein {
+  from { opacity: 0; transform: translateY(4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+/* In-page action toast indicator */
+#privacyshield-toast {
+  position: fixed;
+  bottom: 24px;
+  right: 24px;
+  background: rgba(15, 23, 42, 0.95);
+  border: 1px solid #3b82f6;
+  border-radius: 12px;
+  padding: 12px 18px;
+  color: #f8fafc;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
+  font-size: 13px;
+  box-shadow: 0 10px 30px rgba(0, 0, 0, 0.6);
+  z-index: 2147483647;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  pointer-events: none;
+  transition: opacity 0.25s ease, transform 0.25s ease;
+}
+
+#privacyshield-toast.hidden {
+  opacity: 0;
+  transform: translateY(10px);
+}
+
+.privacyshield-toast-shield {
+  font-size: 16px;
+}
