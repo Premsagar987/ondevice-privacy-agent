@@ -109,16 +109,22 @@
             const range = document.createRange();
             range.setStart(node, match.index);
             range.setEnd(node, match.index + match[0].length);
-            const rect = range.getBoundingClientRect();
+            const rangeRects = [...range.getClientRects()];
+            const rect = rangeRects[0] || range.getBoundingClientRect();
+            const container = parent.closest(".pii-value, .balance-box, [data-visual-pii]");
+            const containerRect = container?.getBoundingClientRect();
+            const useContainer = containerRect && containerRect.width > 0 && containerRect.height > 0 &&
+              containerRect.width <= window.innerWidth * 0.8 && containerRect.height <= 120;
 
             if (rect.width > 0 && rect.height > 0) {
+              const targetRect = useContainer ? containerRect : rect;
               findings.push({
                 type: "dom_text",
                 category,
-                x: Math.round(rect.left),
-                y: Math.round(rect.top),
-                width: Math.round(rect.width),
-                height: Math.round(rect.height),
+                x: Math.round(targetRect.left),
+                y: Math.round(targetRect.top),
+                width: Math.round(targetRect.width),
+                height: Math.round(targetRect.height),
                 label: `PII (${category.toUpperCase()})`
               });
             }
@@ -128,7 +134,11 @@
         }
       }
     }
-    return findings;
+    return findings.filter((finding, index, all) => all.findIndex((other) =>
+      other.category === finding.category &&
+      other.x === finding.x && other.y === finding.y &&
+      other.width === finding.width && other.height === finding.height
+    ) === index);
   }
 
   /**
@@ -328,8 +338,13 @@
       const forms = detectFormPii();
       const texts = detectTextNodePii();
       const avatars = detectAvatarRegions();
+      const regions = [...forms, ...texts, ...avatars].filter((region, index, all) => all.findIndex((other) =>
+        other.type === region.type &&
+        other.x === region.x && other.y === region.y &&
+        other.width === region.width && other.height === region.height
+      ) === index);
       sendResponse({
-        regions: [...forms, ...texts, ...avatars],
+        regions,
         viewport: {
           width: window.innerWidth,
           height: window.innerHeight,

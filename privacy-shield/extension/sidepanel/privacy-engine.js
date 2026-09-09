@@ -205,6 +205,14 @@ class ScreenRedactor {
     return first.x < secondRight && firstRight > second.x && first.y < secondBottom && firstBottom > second.y;
   }
 
+  static clampRegion(region, canvas) {
+    const x = Math.max(0, Math.min(canvas.width, region.x));
+    const y = Math.max(0, Math.min(canvas.height, region.y));
+    const right = Math.max(x, Math.min(canvas.width, region.x + region.width));
+    const bottom = Math.max(y, Math.min(canvas.height, region.y + region.height));
+    return { ...region, x, y, width: right - x, height: bottom - y };
+  }
+
   /**
    * Performs pixel-level canvas redaction.
    * - Blurs faces using HTML5 canvas clipping and Gaussian blur.
@@ -240,13 +248,13 @@ class ScreenRedactor {
           const piiRegions = [];
 
           for (const reg of domRegions) {
-            const mapped = {
+            const mapped = ScreenRedactor.clampRegion({
               ...reg,
               x: Math.round(reg.x * scaleX),
               y: Math.round(reg.y * scaleY),
               width: Math.round(reg.width * scaleX),
               height: Math.round(reg.height * scaleY)
-            };
+            }, canvas);
 
             if (reg.type === "vision_face" || reg.category === "face_avatar") {
               if (!faceRegions.some((face) => ScreenRedactor.overlaps(face, mapped))) {
