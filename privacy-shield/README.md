@@ -1,96 +1,126 @@
-# Privacy-Preserving Browser Agent — SIH 26171
+# PrivacyShield
 
-> On-device Visual Perception for Light-weight Browser Agents
+PrivacyShield is a Chrome Manifest V3 extension and FastAPI demo for privacy-aware browser automation. It is designed around a local privacy boundary: the browser protects the visible page before the reasoning service receives it.
 
-## Architecture
+The banking page contains synthetic data only. Do not enter real credentials or personal information.
 
-Split-processing architecture with two tiers:
-- **Local (Chrome Extension)**: Screen capture → Local ViT (MediaPipe) → PII Detection (Tesseract OCR + Regex) → Canvas Redaction → Sanitized Screenshot
-- **Cloud (FastAPI)**: Receives ONLY sanitized screenshots → Gemini 2.0 Flash VLM reasoning → Structured action commands → Sent back to extension
+## The Flow
 
-**Key principle**: Raw PII data NEVER leaves the user's device.
-
-## Project Structure
-
-```
-AI Agent/
-├── extension/                        # Chrome Extension (Manifest V3)
-│   ├── manifest.json                 # Extension config + CSP
-│   ├── background/service-worker.js  # Screenshot capture
-│   ├── content/content.js            # DOM action executor (click, type, scroll)
-│   ├── content/content.css           # Visual feedback overlay
-│   └── sidepanel/
-│       ├── sidepanel.html            # Side Panel UI
-│       ├── sidepanel.js              # Agent loop orchestrator
-│       ├── sidepanel.css             # Dark theme styling
-│       └── privacy-engine.js         # Core: FaceDetector + TextPIIDetector + ScreenRedactor
-├── backend/
-│   ├── server.py                     # FastAPI + Gemini 2.0 Flash
-│   ├── requirements.txt              # Python deps
-│   └── .env.example                  # API key template
-└── demo-page/
-    └── index.html                    # SecureBank India (fake PII demo page)
+```text
+Browser page
+    -> local DOM and visual detection
+    -> local screenshot redaction
+    -> protected screenshot and structured context
+    -> FastAPI action planner
+    -> local action execution
 ```
 
-## Quick Start
+The extension performs detection and redaction in the browser. The backend returns actions such as click, type, scroll, wait, navigate, or finish.
 
-### 1. Start the Demo Page
-```bash
-cd demo-page
-python3 -m http.server 3000
-```
-Open http://localhost:3000
+## Start the Demo
 
-For a judge-friendly visual explanation of the full data path, open:
-http://localhost:3000/privacy-flow.html
+### Backend
 
-### 2. Start the Backend
-```bash
+From this directory:
+
+```powershell
 cd backend
-cp .env.example .env
-# Edit .env → add your GEMINI_API_KEY
-pip install -r requirements.txt
+python -m venv .venv
+.venv\Scripts\Activate.ps1
+python -m pip install -r requirements.txt
 python server.py
 ```
-Server runs on http://localhost:8000
 
-The backend creates `backend/privacy_audit.db` for metadata-only audit events. It stores the event name, redaction counts, status, and timestamp. Raw screenshots, form values, names, emails, and face pixels are not accepted by the audit endpoint.
+The backend listens on http://localhost:8000.
 
-### 3. Load the Extension
-1. Open `chrome://extensions/`
-2. Enable **Developer mode** (top-right)
-3. Click **Load unpacked** → select the `extension/` folder
-4. Click the extension icon → Side Panel opens
+Useful endpoints:
 
-### 4. Test
-1. Go to http://localhost:3000 (SecureBank India)
-2. Click **"Capture & Redact"** in the Side Panel
-3. See before/after: faces blurred, PII blacked out
-4. Enter a goal → click **Start Agent** → watch autonomous browsing
+- http://localhost:8000/ - service information
+- http://localhost:8000/api/health - health and model configuration
+- `POST /api/analyze` - protected screenshot reasoning
+- `POST /api/audit` - metadata-only audit event
 
-## PII Types Detected
-- Emails, Phone numbers, SSNs
-- Aadhaar numbers, PAN cards (Indian-specific)
-- Credit card numbers
-- Faces / profile photos
+The backend uses `GEMINI_API_KEY` and `GEMINI_MODEL` from `.env` when configured. Without a key or image, the demo uses its deterministic local fallback planner.
 
-## Tech Stack
-| Component | Technology |
-|---|---|
-| Face Detection | MediaPipe BlazeFace (~230 KB) |
-| OCR | Tesseract.js v5 (WASM) |
-| PII Matching | Regex patterns |
-| Redaction | HTML5 Canvas API |
-| Extension | Chrome Manifest V3 + Side Panel |
-| Backend | FastAPI (Python) |
-| AI Reasoning | Gemini 2.0 Flash |
+### Demo page
 
-## 👥 Team Members
+Open a second terminal:
 
-| Name | Role | GitHub Profile |
-|---|---|---|
-| Team Leader | Full Stack / AI Pipeline | [@username](https://github.com/) |
-| Teammate 1 | Chrome Extension / Frontend | [@username](https://github.com/) |
-| Teammate 2 | Backend & API Integration | [@username](https://github.com/) |
-| Teammate 3 | Computer Vision & Testing | [@username](https://github.com/) |
+```powershell
+cd demo-page
+python -m http.server 3000
+```
 
+Open:
+
+- http://localhost:3000 - synthetic banking page
+- http://localhost:3000/privacy-flow.html - animated privacy explanation for judges
+
+### Chrome extension
+
+1. Open `chrome://extensions`.
+2. Turn on **Developer mode**.
+3. Choose **Load unpacked**.
+4. Select this folder's `extension` directory.
+5. Click the extension icon to open the side panel.
+6. Reload the extension after changing JavaScript or CSS files.
+
+## How To Test
+
+1. Open the banking demo.
+2. Click **Protect this page** in the side panel.
+3. Check that the protected preview covers the synthetic profile, account, contact, balance, and card information.
+4. Select a sample task such as transfer, KYC, or card bill.
+5. Click **Start task** and watch the activity log.
+6. Stop the task if needed with **Stop task**.
+
+## Detection And Redaction
+
+The current implementation combines:
+
+- Sensitive form-field detection based on type, name, ID, label, and autocomplete attributes.
+- DOM text patterns for email, phone, Aadhaar-shaped, PAN-shaped, card-shaped, account, currency, IFSC, and customer-ID-shaped values.
+- Semantic blocks for profile details, PII cards, balances, and payment-card panels.
+- Native browser face detection when available.
+- A lightweight local skin-colour heuristic when native face detection is unavailable.
+- Canvas masks for text and form information, and blur overlays for face regions.
+
+The capture path waits for fonts and browser rendering to settle, records the exact viewport used for the screenshot, maps CSS coordinates to the captured image dimensions, removes duplicate regions, and clamps masks to the image boundary.
+
+## What The Backend Stores
+
+The SQLite audit database is created at `backend/privacy_audit.db`. It stores only:
+
+- Event name
+- Number of detected PII regions
+- Number of face regions
+- Verification status
+- Timestamp
+
+It does not accept raw screenshots, names, emails, account values, or face pixels. The database is ignored by Git using `*.db`.
+
+## Known Weak Points
+
+The following limitations are deliberate and should be included in any project presentation:
+
+- The repository does not bundle OCR or a trained face model. DOM and regex detection cannot find every personal value in arbitrary page images or canvas content.
+- Browser face detection is not guaranteed on every Chrome installation. The fallback heuristic can miss faces and can also produce false positives.
+- Free-text names and unfamiliar ID formats are difficult to identify without a local OCR or NER model.
+- `<all_urls>` permissions are wider than a production extension needs.
+- The backend allows all CORS origins for local development.
+- The demo planner can return typed values for synthetic tasks. A production version must use a local vault or explicit user confirmation for secrets and high-risk actions.
+- The Gemini model name is configurable. Documentation should not assume a specific model when `.env` overrides it.
+- This is a local demonstration. It has not been benchmarked across arbitrary websites, iframes, shadow DOM, or multiple tabs.
+
+## Files Worth Knowing
+
+- `extension/content/content.js` - local DOM detection, sanitization, and action execution.
+- `extension/sidepanel/privacy-engine.js` - screenshot redaction and face detection.
+- `extension/sidepanel/sidepanel.js` - capture, backend request, and agent loop.
+- `extension/background/service-worker.js` - stable capture preparation and screenshot capture.
+- `backend/server.py` - FastAPI endpoints, fallback planner, Gemini integration, and audit database.
+- `demo-page/privacy-flow.html` - visual explanation of the privacy boundary.
+
+## GitHub
+
+https://github.com/Premsagar987/ondevice-privacy-agent
