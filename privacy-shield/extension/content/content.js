@@ -307,7 +307,13 @@
       toastEl.id = "privacyshield-toast";
       document.body.appendChild(toastEl);
     }
-    toastEl.innerHTML = `<span class="privacyshield-toast-shield">🛡️</span><span>${description || "PrivacyShield Executing Action"}</span>`;
+    toastEl.replaceChildren();
+    const shield = document.createElement("span");
+    shield.className = "privacyshield-toast-shield";
+    shield.textContent = "🛡️";
+    const message = document.createElement("span");
+    message.textContent = description || "PrivacyShield Executing Action";
+    toastEl.append(shield, message);
     toastEl.classList.remove("hidden");
 
     setTimeout(() => {
@@ -320,6 +326,11 @@
    */
   async function executeAction(action) {
     const { action: type, target_selector, value, pixels, url, ms } = action;
+
+    const allowedActions = new Set(["click", "type", "scroll", "navigate", "wait", "finish"]);
+    if (!allowedActions.has(type)) {
+      return { success: false, message: `Unknown action type: ${type}` };
+    }
 
     let targetElement = null;
     if (target_selector) {
@@ -335,6 +346,11 @@
     switch (type) {
       case "click":
         if (targetElement) {
+          const actionText = `${targetElement.id} ${targetElement.getAttribute("aria-label") || ""} ${targetElement.textContent || ""}`.toLowerCase();
+          const highRisk = /(transfer|submit|pay|payment|confirm|kyc)/i.test(actionText);
+          if (highRisk && !window.confirm("PrivacyShield is ready to perform this important action. Continue?")) {
+            return { success: false, message: "Action cancelled by the user." };
+          }
           targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
           await new Promise((r) => setTimeout(r, 150));
           targetElement.click();
@@ -344,6 +360,9 @@
 
       case "type":
         if (targetElement) {
+          if (!(targetElement instanceof HTMLInputElement || targetElement instanceof HTMLTextAreaElement || targetElement instanceof HTMLSelectElement)) {
+            return { success: false, message: "Typing is only allowed in form fields." };
+          }
           targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
           targetElement.focus();
           targetElement.value = value || "";
@@ -358,7 +377,7 @@
         return { success: true, message: `Scrolled viewport by ${pixels || 350}px` };
 
       case "navigate":
-        if (url) {
+        if (url && /^https?:\/\//i.test(url)) {
           window.location.href = url;
           return { success: true, message: `Navigating to ${url}` };
         }

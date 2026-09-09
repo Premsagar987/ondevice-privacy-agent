@@ -106,10 +106,11 @@ The following limitations are deliberate and should be included in any project p
 - The repository does not bundle OCR or a trained face model. DOM and regex detection cannot find every personal value in arbitrary page images or canvas content.
 - Browser face detection is not guaranteed on every Chrome installation. The fallback heuristic can miss faces and can also produce false positives.
 - Free-text names and unfamiliar ID formats are difficult to identify without a local OCR or NER model.
-- `<all_urls>` permissions are wider than a production extension needs.
-- The backend allows all CORS origins for local development.
+- The extension is scoped to the local demo origins; production deployments should review the final host permissions.
+- The backend defaults to the local demo origins and supports a `CORS_ORIGINS` environment override.
 - The demo planner can return typed values for synthetic tasks. A production version must use a local vault or explicit user confirmation for secrets and high-risk actions.
 - The Gemini model name is configurable. Documentation should not assume a specific model when `.env` overrides it.
+- Backend requests have a client timeout, and high-risk demo clicks ask for user confirmation before execution.
 - This is a local demonstration. It has not been benchmarked across arbitrary websites, iframes, shadow DOM, or multiple tabs.
 
 ## Files Worth Knowing

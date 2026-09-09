@@ -92,10 +92,10 @@ This is a working research demo, not a production security product.
 - There is no Tesseract OCR or MediaPipe model bundled in this repository. Text protection currently uses DOM inspection and regular expressions.
 - Face detection is strongest for known avatar/profile elements. The browser face API and colour heuristic can miss faces in arbitrary photographs.
 - Free-text names and unknown personal identifiers are not reliably detected unless they are inside a known sensitive block.
-- The extension currently requests `<all_urls>` access. That is convenient for a demo but broader than necessary for a production release.
+- The extension is currently scoped to the local demo origins. A production release should still review and narrow permissions for its final deployment targets.
 - The task description and action history can contain values typed by the user. Do not use real credentials or real banking data.
 - High-risk actions are demo actions and do not have a production-grade approval or transaction safety flow.
-- The backend CORS policy is open for local development and must be restricted before deployment.
+- The backend CORS policy defaults to the local demo origins and can be configured with `CORS_ORIGINS` before deployment.
 - The local audit database is metadata-only, but it is not a full compliance logging system.
 
 ## Security Rule

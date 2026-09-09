@@ -35,6 +35,7 @@ const metricFaces = document.getElementById("metricFaces");
 const metricLatency = document.getElementById("metricLatency");
 const metricLeakage = document.getElementById("metricLeakage");
 const logList = document.getElementById("logList");
+const REQUEST_TIMEOUT_MS = 30000;
 
 function log(text) {
   const now = new Date();
@@ -200,9 +201,12 @@ async function runAutonomousLoop() {
       log(`[Step ${step}] Consulting Cloud VLM (Gemini 2.0 Flash)...`);
       let analysisRes;
       try {
+        const controller = new AbortController();
+        const timeout = setTimeout(() => controller.abort(), REQUEST_TIMEOUT_MS);
         analysisRes = await fetch(BACKEND_URL, {
           method: "POST",
           headers: { "Content-Type": "application/json" },
+          signal: controller.signal,
           body: JSON.stringify({
             image_base64: redactResult.redactedBase64,
             dom_snapshot: domSnapshot,
@@ -213,7 +217,11 @@ async function runAutonomousLoop() {
             max_steps: agentState.maxSteps
           })
         });
+        clearTimeout(timeout);
       } catch (netErr) {
+        if (netErr.name === "AbortError") {
+          throw new Error("The backend took too long to respond. The task was stopped safely.");
+        }
         throw new Error("Cannot connect to FastAPI backend at http://localhost:8000. Ensure 'python server.py' is running in backend/");
       }
 
@@ -223,6 +231,10 @@ async function runAutonomousLoop() {
       }
 
       const action = await analysisRes.json();
+      const validActions = new Set(["click", "type", "scroll", "navigate", "wait", "finish"]);
+      if (!validActions.has(action.action)) {
+        throw new Error("The backend returned an unsupported action. The task was stopped safely.");
+      }
       log(`[Step ${step}] Planned: ${action.description || action.action}`);
 
       // Check if task is finished

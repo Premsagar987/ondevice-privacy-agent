@@ -9,7 +9,7 @@ import re
 import json
 import base64
 import sqlite3
-from typing import Any, Dict, List, Optional
+from typing import Any, Dict, List, Optional, Literal
 from datetime import datetime
 
 import uvicorn
@@ -20,6 +20,15 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
+PORT = int(os.getenv("PORT", "8000"))
+AUDIT_DB_PATH = os.getenv("AUDIT_DB_PATH", os.path.join(os.path.dirname(__file__), "privacy_audit.db"))
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
+CORS_ORIGINS = [origin.strip() for origin in os.getenv(
+    "CORS_ORIGINS",
+    "http://localhost:3000,http://127.0.0.1:3000"
+).split(",") if origin.strip()]
+
 app = FastAPI(
     title="PrivacyShield VLM Backend",
     description="Tier 2 Cloud VLM reasoning endpoint receiving only on-device sanitized screenshots.",
@@ -28,17 +37,11 @@ app = FastAPI(
 
 app.add_middleware(
     CORSMiddleware,
-    allow_origins=["*"],
+    allow_origins=CORS_ORIGINS,
     allow_credentials=True,
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-PORT = int(os.getenv("PORT", "8000"))
-AUDIT_DB_PATH = os.getenv("AUDIT_DB_PATH", os.path.join(os.path.dirname(__file__), "privacy_audit.db"))
-GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
-GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
-
 
 class AnalyzeRequest(BaseModel):
     image_base64: Optional[str] = Field(default="", max_length=16_000_000, description="Base64 encoded sanitized screenshot")
@@ -51,13 +54,13 @@ class AnalyzeRequest(BaseModel):
 
 
 class ActionResponse(BaseModel):
-    action: str = Field(..., description="click | type | scroll | navigate | wait | finish")
-    target_selector: str = Field(default="", description="CSS selector for target element")
-    description: str = Field(default="", description="Human-readable step description")
-    value: str = Field(default="", description="Value to type if action is 'type'")
-    pixels: int = Field(default=0, description="Pixels to scroll if action is 'scroll'")
-    url: str = Field(default="", description="Destination URL if action is 'navigate'")
-    ms: int = Field(default=500, description="Wait duration in milliseconds")
+    action: Literal["click", "type", "scroll", "navigate", "wait", "finish"]
+    target_selector: str = Field(default="", max_length=500, description="CSS selector for target element")
+    description: str = Field(default="", max_length=500, description="Human-readable step description")
+    value: str = Field(default="", max_length=1000, description="Value to type if action is 'type'")
+    pixels: int = Field(default=0, ge=-5000, le=5000, description="Pixels to scroll if action is 'scroll'")
+    url: str = Field(default="", max_length=2000, description="Destination URL if action is 'navigate'")
+    ms: int = Field(default=500, ge=0, le=30000, description="Wait duration in milliseconds")
 
 
 class AuditEvent(BaseModel):
