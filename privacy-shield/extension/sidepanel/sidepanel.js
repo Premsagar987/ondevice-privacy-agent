@@ -132,11 +132,13 @@ async function captureAndRedact() {
     previewImage.src = redaction.redactedBase64;
     tabRedacted.classList.add("active");
     tabOriginal.classList.remove("active");
-    previewTag.textContent = "Sanitized (Cloud)";
+    previewTag.textContent = "Protected version";
 
     updateTelemetry(redaction.domPiiCount, redaction.facesCount, redaction.latencyMs);
     log(`Redacted: ${redaction.domPiiCount} PII fields blacked out, ${redaction.facesCount} faces blurred in ${redaction.latencyMs}ms.`);
-    setStatus("Idle", "idle");
+    if (!agentState.isRunning) {
+      setStatus("Idle", "idle");
+    }
 
     return { ...redaction, tabId };
   } catch (err) {

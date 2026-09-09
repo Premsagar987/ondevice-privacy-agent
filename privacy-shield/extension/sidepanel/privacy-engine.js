@@ -197,6 +197,14 @@ class ScreenRedactor {
     this.textDetector = new TextPIIDetector();
   }
 
+  static overlaps(first, second) {
+    const firstRight = first.x + first.width;
+    const firstBottom = first.y + first.height;
+    const secondRight = second.x + second.width;
+    const secondBottom = second.y + second.height;
+    return first.x < secondRight && firstRight > second.x && first.y < secondBottom && firstBottom > second.y;
+  }
+
   /**
    * Performs pixel-level canvas redaction.
    * - Blurs faces using HTML5 canvas clipping and Gaussian blur.
@@ -217,9 +225,12 @@ class ScreenRedactor {
           // Draw original raw screenshot
           ctx.drawImage(img, 0, 0);
 
-          // Scaling ratio between DOM client coordinates and screenshot canvas pixels
-          const dpr = viewport?.devicePixelRatio || (canvas.width / (viewport?.width || window.innerWidth || 1));
-          const scale = dpr > 0 ? dpr : 1;
+          // Map CSS viewport coordinates to the actual captured image dimensions.
+          // captureVisibleTab can differ from devicePixelRatio because of zoom and display scaling.
+          const viewportWidth = viewport?.width || window.innerWidth || canvas.width;
+          const viewportHeight = viewport?.height || window.innerHeight || canvas.height;
+          const scaleX = canvas.width / viewportWidth;
+          const scaleY = canvas.height / viewportHeight;
 
           // 1. Run local visual face perception on the screenshot canvas
           const visionFaces = await this.faceDetector.detect(canvas);
@@ -231,14 +242,16 @@ class ScreenRedactor {
           for (const reg of domRegions) {
             const mapped = {
               ...reg,
-              x: Math.round(reg.x * scale),
-              y: Math.round(reg.y * scale),
-              width: Math.round(reg.width * scale),
-              height: Math.round(reg.height * scale)
+              x: Math.round(reg.x * scaleX),
+              y: Math.round(reg.y * scaleY),
+              width: Math.round(reg.width * scaleX),
+              height: Math.round(reg.height * scaleY)
             };
 
             if (reg.type === "vision_face" || reg.category === "face_avatar") {
-              faceRegions.push(mapped);
+              if (!faceRegions.some((face) => ScreenRedactor.overlaps(face, mapped))) {
+                faceRegions.push(mapped);
+              }
             } else {
               piiRegions.push(mapped);
             }
@@ -250,8 +263,8 @@ class ScreenRedactor {
             const pad = Math.round(Math.min(face.width, face.height) * 0.1);
             const fx = Math.max(0, face.x - pad);
             const fy = Math.max(0, face.y - pad);
-            const fw = Math.min(canvas.width - fx, face.width + pad * 2);
-            const fh = Math.min(canvas.height - fy, face.height + pad * 2);
+            const fw = Math.max(0, Math.min(canvas.width - fx, face.width + pad * 2));
+            const fh = Math.max(0, Math.min(canvas.height - fy, face.height + pad * 2));
 
             ctx.save();
             ctx.beginPath();
@@ -279,8 +292,8 @@ class ScreenRedactor {
             if (pii.width <= 0 || pii.height <= 0) continue;
             const px = Math.max(0, pii.x - 3);
             const py = Math.max(0, pii.y - 2);
-            const pw = Math.min(canvas.width - px, pii.width + 6);
-            const ph = Math.min(canvas.height - py, pii.height + 4);
+            const pw = Math.max(0, Math.min(canvas.width - px, pii.width + 6));
+            const ph = Math.max(0, Math.min(canvas.height - py, pii.height + 4));
 
             // Fill blackout box
             ctx.fillStyle = "#050505";
