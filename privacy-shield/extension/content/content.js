@@ -341,6 +341,24 @@
       return true;
     }
 
+    if (req.type === "PREPARE_CAPTURE") {
+      (async () => {
+        if (document.fonts?.ready) await document.fonts.ready;
+        await new Promise((resolve) => requestAnimationFrame(() => requestAnimationFrame(resolve)));
+        sendResponse({
+          ready: true,
+          viewport: {
+            width: window.visualViewport?.width || window.innerWidth,
+            height: window.visualViewport?.height || window.innerHeight,
+            devicePixelRatio: window.devicePixelRatio || 1,
+            scrollX: window.scrollX,
+            scrollY: window.scrollY
+          }
+        });
+      })();
+      return true;
+    }
+
     if (req.type === "GET_DOM_SNAPSHOT") {
       sendResponse(sanitizeDomTree());
       return true;

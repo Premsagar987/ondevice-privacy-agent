@@ -31,9 +31,23 @@ async function ensureContentScriptReady(tabId) {
         files: ["content/content.css"]
       });
     }
+    return true;
   } catch (e) {
     console.warn("[PrivacyShield Service Worker] Injection warning:", e.message);
+    return false;
   }
+}
+
+async function prepareCapture(tabId) {
+  return new Promise((resolve) => {
+    chrome.tabs.sendMessage(tabId, { type: "PREPARE_CAPTURE" }, (res) => {
+      if (chrome.runtime.lastError || !res?.ready) {
+        resolve(null);
+        return;
+      }
+      resolve(res.viewport || null);
+    });
+  });
 }
 
 // Runtime message dispatcher
@@ -47,14 +61,23 @@ chrome.runtime.onMessage.addListener((request, sender, sendResponse) => {
           return;
         }
 
-        await ensureContentScriptReady(tab.id);
+        if (!await ensureContentScriptReady(tab.id)) {
+          sendResponse({ success: false, error: "PrivacyShield could not prepare the page safely." });
+          return;
+        }
+
+        const viewport = await prepareCapture(tab.id);
+        if (!viewport) {
+          sendResponse({ success: false, error: "The page was not ready for a stable privacy capture." });
+          return;
+        }
 
         const dataUrl = await chrome.tabs.captureVisibleTab(tab.windowId || null, {
           format: "jpeg",
           quality: 90
         });
 
-        sendResponse({ success: true, dataUrl, tabId: tab.id });
+        sendResponse({ success: true, dataUrl, tabId: tab.id, viewport });
       } catch (err) {
         sendResponse({ success: false, error: err.message });
       }

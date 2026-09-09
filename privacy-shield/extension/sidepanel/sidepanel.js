@@ -103,7 +103,7 @@ async function captureAndRedact() {
       throw new Error(captureRes?.error || "Failed to capture active tab screenshot");
     }
 
-    const { dataUrl, tabId } = captureRes;
+    const { dataUrl, tabId, viewport: capturedViewport } = captureRes;
 
     // 2. Query page DOM for sensitive fields, text PII, and avatar elements
     const piiData = await new Promise((resolve) => {
@@ -122,7 +122,7 @@ async function captureAndRedact() {
     const redaction = await window.PrivacyEngine.ScreenRedactor.redact(
       dataUrl,
       piiData.regions,
-      piiData.viewport
+      capturedViewport || piiData.viewport
     );
 
     agentState.lastRedaction = redaction;
