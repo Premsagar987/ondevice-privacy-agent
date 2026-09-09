@@ -41,7 +41,13 @@ function log(text) {
   const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}:${String(now.getSeconds()).padStart(2, "0")}`;
   const item = document.createElement("div");
   item.className = "log-item";
-  item.innerHTML = `<span class="log-time">${timeStr}</span><span class="log-text">${text}</span>`;
+  const time = document.createElement("span");
+  time.className = "log-time";
+  time.textContent = timeStr;
+  const message = document.createElement("span");
+  message.className = "log-text";
+  message.textContent = text;
+  item.append(time, message);
   logList.prepend(item);
 }
 
@@ -70,7 +76,7 @@ tabRedacted.addEventListener("click", () => {
   tabRedacted.classList.add("active");
   tabOriginal.classList.remove("active");
   previewImage.src = agentState.lastRedaction.redactedBase64;
-  previewTag.textContent = "Sanitized (Cloud)";
+  previewTag.textContent = "Protected version";
   previewTag.style.color = "#34d399";
 });
 
@@ -229,9 +235,17 @@ async function runAutonomousLoop() {
       // 4. Execute action on live page with visual overlay
       const execResult = await new Promise((resolve) => {
         chrome.tabs.sendMessage(tabId, { type: "EXECUTE_ACTION", action }, (res) => {
-          resolve(res || { success: true });
+          if (chrome.runtime.lastError) {
+            resolve({ success: false, message: chrome.runtime.lastError.message });
+            return;
+          }
+          resolve(res || { success: false, message: "The page did not respond." });
         });
       });
+
+      if (!execResult.success) {
+        throw new Error(execResult.message || "The page could not complete the requested action.");
+      }
 
       agentState.actionHistory.push({
         step,

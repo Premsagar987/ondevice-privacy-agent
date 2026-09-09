@@ -8,6 +8,7 @@ import os
 import re
 import json
 import base64
+import sqlite3
 from typing import Any, Dict, List, Optional
 from datetime import datetime
 
@@ -34,17 +35,19 @@ app.add_middleware(
 )
 
 PORT = int(os.getenv("PORT", "8000"))
+AUDIT_DB_PATH = os.getenv("AUDIT_DB_PATH", os.path.join(os.path.dirname(__file__), "privacy_audit.db"))
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY", "")
+GEMINI_MODEL = os.getenv("GEMINI_MODEL", "gemini-3.6-flash")
 
 
 class AnalyzeRequest(BaseModel):
-    image_base64: Optional[str] = Field(default="", description="Base64 encoded sanitized screenshot")
+    image_base64: Optional[str] = Field(default="", max_length=16_000_000, description="Base64 encoded sanitized screenshot")
     dom_snapshot: Optional[Dict[str, Any]] = Field(default_factory=dict)
-    task_description: str = Field(..., description="User goal or task instruction")
+    task_description: str = Field(..., min_length=1, max_length=500, description="User goal or task instruction")
     redaction_manifest: Optional[Dict[str, Any]] = Field(default_factory=dict)
-    action_history: Optional[List[Dict[str, Any]]] = Field(default_factory=list)
-    current_step: Optional[int] = Field(default=1)
-    max_steps: Optional[int] = Field(default=8)
+    action_history: Optional[List[Dict[str, Any]]] = Field(default_factory=list, max_length=20)
+    current_step: Optional[int] = Field(default=1, ge=1, le=50)
+    max_steps: Optional[int] = Field(default=8, ge=1, le=50)
 
 
 class ActionResponse(BaseModel):
@@ -55,6 +58,34 @@ class ActionResponse(BaseModel):
     pixels: int = Field(default=0, description="Pixels to scroll if action is 'scroll'")
     url: str = Field(default="", description="Destination URL if action is 'navigate'")
     ms: int = Field(default=500, description="Wait duration in milliseconds")
+
+
+class AuditEvent(BaseModel):
+    event: str = Field(..., min_length=1, max_length=80)
+    pii_count: int = Field(default=0, ge=0, le=10000)
+    face_count: int = Field(default=0, ge=0, le=10000)
+    raw_data_stored: bool = Field(default=False)
+
+
+def init_audit_db() -> None:
+    with sqlite3.connect(AUDIT_DB_PATH) as connection:
+        connection.execute(
+            """
+            CREATE TABLE IF NOT EXISTS privacy_audit_events (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                event TEXT NOT NULL,
+                pii_count INTEGER NOT NULL,
+                face_count INTEGER NOT NULL,
+                raw_data_stored INTEGER NOT NULL CHECK (raw_data_stored = 0),
+                status TEXT NOT NULL,
+                created_at TEXT NOT NULL
+            )
+            """
+        )
+        connection.commit()
+
+
+init_audit_db()
 
 
 def parse_json_response(text: str) -> Dict[str, Any]:
@@ -239,10 +270,38 @@ async def health_check():
     return {
         "status": "ok",
         "tier": "Cloud VLM Reasoning Service",
-        "model": "gemini-2.0-flash",
+        "model": GEMINI_MODEL,
         "has_api_key": api_key_set,
         "port": PORT,
         "timestamp": datetime.utcnow().isoformat() + "Z"
+    }
+
+
+@app.post("/api/audit")
+async def create_audit_event(payload: AuditEvent):
+    """Store operational metadata only; raw screenshots and personal data are not accepted."""
+    if payload.raw_data_stored:
+        raise HTTPException(status_code=400, detail="Raw personal data cannot be stored")
+
+    created_at = datetime.utcnow().isoformat() + "Z"
+    with sqlite3.connect(AUDIT_DB_PATH) as connection:
+        cursor = connection.execute(
+            """
+            INSERT INTO privacy_audit_events
+                (event, pii_count, face_count, raw_data_stored, status, created_at)
+            VALUES (?, ?, ?, 0, 'verified', ?)
+            """,
+            (payload.event, payload.pii_count, payload.face_count, created_at),
+        )
+        connection.commit()
+        record_id = cursor.lastrowid
+
+    return {
+        "id": record_id,
+        "event": payload.event,
+        "status": "verified",
+        "created_at": created_at,
+        "raw_data_stored": False,
     }
 
 
@@ -257,6 +316,9 @@ async def analyze_redacted_screen(payload: AnalyzeRequest):
     task = payload.task_description.strip()
     if not task:
         raise HTTPException(status_code=400, detail="task_description cannot be empty")
+
+    if (payload.current_step or 1) > (payload.max_steps or 8):
+        raise HTTPException(status_code=400, detail="current_step cannot exceed max_steps")
 
     history = payload.action_history or []
     step = payload.current_step or 1
@@ -300,14 +362,14 @@ async def analyze_redacted_screen(payload: AnalyzeRequest):
         "}"
     )
 
-    # Invoke Gemini 2.0 Flash
+    # Invoke the configured Gemini model
     try:
         from google import genai
         from google.genai import types
 
         client = genai.Client(api_key=api_key)
         response = client.models.generate_content(
-            model="gemini-2.0-flash",
+            model=GEMINI_MODEL,
             contents=[
                 types.Part.from_bytes(data=image_bytes, mime_type="image/jpeg"),
                 types.Part.from_text(text=system_prompt)

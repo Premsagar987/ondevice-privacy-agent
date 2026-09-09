@@ -6,29 +6,29 @@
   <title>SecureBank India — Internet Banking Portal</title>
   <style>
     :root {
-      --bg-primary: #0a0f1d;
-      --bg-surface: #111827;
-      --bg-card: #1e293b;
-      --bg-input: #0f172a;
-      --border: #334155;
-      --text-main: #f8fafc;
-      --text-muted: #94a3b8;
-      --accent: #2563eb;
-      --accent-hover: #1d4ed8;
-      --success: #10b981;
-      --warning: #f59e0b;
-      --danger: #ef4444;
+      --bg-primary: #f5f7fa;
+      --bg-surface: #ffffff;
+      --bg-card: #eef2f6;
+      --bg-input: #f8fafc;
+      --border: #d7dee7;
+      --text-main: #243447;
+      --text-muted: #6b7785;
+      --accent: #35658a;
+      --accent-hover: #2d5879;
+      --success: #4f806b;
+      --warning: #a4773d;
+      --danger: #a65b5b;
     }
 
     * {
       box-sizing: border-box;
       margin: 0;
       padding: 0;
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Oxygen, Ubuntu, Cantarell, sans-serif;
+      font-family: "Trebuchet MS", "Segoe UI", sans-serif;
     }
 
     body {
-      background-color: var(--bg-primary);
+      background: linear-gradient(180deg, #f8fafc 0%, var(--bg-primary) 100%);
       color: var(--text-main);
       min-height: 100vh;
       display: flex;
@@ -44,8 +44,7 @@
       justify-content: space-between;
       align-items: center;
       padding: 16px 24px;
-      background: rgba(17, 24, 39, 0.85);
-      backdrop-filter: blur(12px);
+      background: rgba(255, 255, 255, 0.92);
       border: 1px solid var(--border);
       border-radius: 14px;
       margin-bottom: 24px;
@@ -65,20 +64,17 @@
       font-size: 20px;
       font-weight: 800;
       letter-spacing: -0.02em;
-      background: linear-gradient(135deg, #60a5fa, #a855f7);
-      -webkit-background-clip: text;
-      background-clip: text;
-      -webkit-text-fill-color: transparent;
+      color: #294d6a;
     }
 
     .nav-badge {
       font-size: 11px;
       font-weight: 700;
-      background: rgba(37, 99, 235, 0.2);
-      color: #60a5fa;
+      background: #e8eef4;
+      color: #536d83;
       padding: 4px 10px;
       border-radius: 9999px;
-      border: 1px solid rgba(37, 99, 235, 0.4);
+      border: 1px solid #cbd8e3;
       text-transform: uppercase;
       letter-spacing: 0.05em;
     }
@@ -102,7 +98,7 @@
       border: 1px solid var(--border);
       border-radius: 16px;
       padding: 24px;
-      box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.4);
+      box-shadow: 0 8px 20px -10px rgba(36, 52, 71, 0.28);
     }
 
     .card-title {
@@ -112,7 +108,7 @@
       display: flex;
       align-items: center;
       gap: 8px;
-      color: #e2e8f0;
+      color: #52606d;
     }
 
     /* Profile Header */
@@ -371,7 +367,10 @@
         <div style="font-size: 11px; color: #94a3b8;">SIH 26171 On-Device Privacy Benchmark Portal</div>
       </div>
     </div>
-    <div class="nav-badge">Encrypted TLS 1.3</div>
+    <div style="display: flex; align-items: center; gap: 14px;">
+      <a href="privacy-flow.html" style="color: #35658a; font-size: 12px; text-decoration: none;">View privacy flow</a>
+      <div class="nav-badge">Encrypted TLS 1.3</div>
+    </div>
   </header>
 
   <main class="container">

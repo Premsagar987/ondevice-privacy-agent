@@ -32,11 +32,11 @@
     if (!el || !(el instanceof Element)) return "body";
     if (el.id) return `#${CSS.escape(el.id)}`;
     const name = el.getAttribute("name");
-    if (name) return `${el.tagName.toLowerCase()}[name="${name}"]`;
+    if (name) return `${el.tagName.toLowerCase()}[name="${CSS.escape(name)}"]`;
     const testId = el.getAttribute("data-testid");
-    if (testId) return `[data-testid="${testId}"]`;
+    if (testId) return `[data-testid="${CSS.escape(testId)}"]`;
     const ariaLabel = el.getAttribute("aria-label");
-    if (ariaLabel) return `[aria-label="${ariaLabel}"]`;
+    if (ariaLabel) return `[aria-label="${CSS.escape(ariaLabel)}"]`;
     const classes = el.className ? String(el.className).split(/\s+/).filter(Boolean) : [];
     if (classes.length) {
       return `${el.tagName.toLowerCase()}.${classes[0]}`;
@@ -187,12 +187,26 @@
       // Strip dangerous or bloat tags
       clone.querySelectorAll('script, style, link, noscript, iframe').forEach((el) => el.remove());
 
+      // Replace visible text PII too; form-value replacement alone is not enough.
+      const textWalker = document.createTreeWalker(clone, NodeFilter.SHOW_TEXT);
+      const textNodes = [];
+      let textNode;
+      while ((textNode = textWalker.nextNode())) textNodes.push(textNode);
+      textNodes.forEach((node) => {
+        let safeText = node.nodeValue || "";
+        for (const regex of Object.values(PII_REGEXES)) {
+          regex.lastIndex = 0;
+          safeText = safeText.replace(regex, "[REDACTED]");
+        }
+        node.nodeValue = safeText;
+      });
+
       const rawHtml = clone.innerHTML;
       const snippet = rawHtml.replace(/\s+/g, " ").slice(0, 8000);
 
       return {
         title: document.title,
-        url: window.location.href,
+        url: `${window.location.origin}${window.location.pathname}`,
         htmlSnippet: snippet
       };
     } catch (e) {
@@ -265,7 +279,6 @@
           targetElement.scrollIntoView({ behavior: "smooth", block: "center" });
           await new Promise((r) => setTimeout(r, 150));
           targetElement.click();
-          targetElement.dispatchEvent(new MouseEvent("click", { bubbles: true, cancelable: true }));
           return { success: true, message: `Clicked ${target_selector}` };
         }
         return { success: false, message: `Element not found: ${target_selector}` };

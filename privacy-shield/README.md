@@ -41,6 +41,9 @@ python3 -m http.server 3000
 ```
 Open http://localhost:3000
 
+For a judge-friendly visual explanation of the full data path, open:
+http://localhost:3000/privacy-flow.html
+
 ### 2. Start the Backend
 ```bash
 cd backend
@@ -50,6 +53,8 @@ pip install -r requirements.txt
 python server.py
 ```
 Server runs on http://localhost:8000
+
+The backend creates `backend/privacy_audit.db` for metadata-only audit events. It stores the event name, redaction counts, status, and timestamp. Raw screenshots, form values, names, emails, and face pixels are not accepted by the audit endpoint.
 
 ### 3. Load the Extension
 1. Open `chrome://extensions/`
