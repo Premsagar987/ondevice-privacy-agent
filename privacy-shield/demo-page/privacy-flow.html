@@ -124,7 +124,11 @@
       [['status', event.status], ['records created', '1'], ['event', event.event], ['personal content', 'never stored'], ['recorded at', event.created_at]].forEach(([label, value]) => {
         const row = document.createElement('div');
         row.className = 'audit-row';
-        row.innerHTML = `<span>${label}</span><span>${value}</span>`;
+        const labelElement = document.createElement('span');
+        labelElement.textContent = label;
+        const valueElement = document.createElement('span');
+        valueElement.textContent = value;
+        row.append(labelElement, valueElement);
         auditList.appendChild(row);
       });
     }
