@@ -277,6 +277,19 @@ async def health_check():
     }
 
 
+@app.get("/")
+async def service_home():
+    """Provide a useful landing response instead of an empty 404 at the API root."""
+    return {
+        "service": "PrivacyShield Backend",
+        "status": "running",
+        "demo_url": "http://localhost:3000/",
+        "privacy_flow_url": "http://localhost:3000/privacy-flow.html",
+        "health_url": "http://localhost:8000/api/health",
+        "audit_url": "http://localhost:8000/api/audit",
+    }
+
+
 @app.post("/api/audit")
 async def create_audit_event(payload: AuditEvent):
     """Store operational metadata only; raw screenshots and personal data are not accepted."""
