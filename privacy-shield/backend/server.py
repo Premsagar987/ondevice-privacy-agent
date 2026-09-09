@@ -1,7 +1,7 @@
 """
 Privacy-Preserving Browser Agent Backend — SIH 26171
 FastAPI Cloud reasoning tier receiving ONLY sanitized screenshots and returning structured actions.
-Powered by Gemini 2.0 Flash.
+Powered by the model configured through `GEMINI_MODEL`.
 """
 
 import os

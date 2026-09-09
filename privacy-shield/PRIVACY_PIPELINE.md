@@ -59,7 +59,7 @@ The `sanitizeDomTree()` function in `extension/content/content.js`:
 - Strips `<script>`, `<style>`, `<iframe>`, and non-essential DOM tags.
 - Produces a clean, non-confidential structural snippet.
 
-## 5. Cloud Tier: FastAPI & Gemini 2.0 Flash
+## 5. Cloud Tier: FastAPI and Configured Reasoning Model
 
 The cloud backend is in `backend/server.py` running on port 8000.
 
@@ -78,7 +78,7 @@ Payload sent to `POST /api/analyze`:
 
 The cloud server:
 1. Validates that the input image is already sanitized.
-2. Formats a structured multimodal reasoning prompt for **Gemini 2.0 Flash** (`gemini-2.0-flash`).
+2. Formats a structured multimodal reasoning prompt for the model selected by `GEMINI_MODEL` (Gemini by default in the local `.env` configuration).
 3. If `GEMINI_API_KEY` is not set, an intelligent deterministic heuristic planner provides complete, end-to-end multi-step flows for demo scenarios.
 4. Returns a typed JSON action response:
 ```json

@@ -198,7 +198,7 @@ async function runAutonomousLoop() {
       });
 
       // 3. Send ONLY sanitized screenshot + sanitized DOM to FastAPI backend (Port 8000)
-      log(`[Step ${step}] Consulting Cloud VLM (Gemini 2.0 Flash)...`);
+      log(`[Step ${step}] Consulting the configured reasoning model...`);
       let analysisRes;
       try {
         const controller = new AbortController();
