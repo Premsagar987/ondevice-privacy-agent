@@ -13,7 +13,8 @@
   const SENSITIVE_KEYWORDS = [
     "card", "ssn", "pan", "cvv", "dob", "address", "credit",
     "pin", "phone", "pass", "account", "routing", "iban", "swift",
-    "aadhaar", "beneficiary", "secret"
+    "aadhaar", "beneficiary", "secret", "ifsc", "balance", "customer",
+    "holder", "identity", "kyc"
   ];
 
   // Regex patterns for text nodes
@@ -22,7 +23,11 @@
     pan: /\b[A-Z]{5}[0-9]{4}[A-Z]{1}\b/g,
     phone: /(?:\+91[\-\s]?)?[6-9]\d{9}\b/g,
     email: /\b[A-Za-z0-9._%+-]+@[A-Za-z0-9.-]+\.[A-Z|a-z]{2,}\b/g,
-    card: /\b(?:\d{4}[-\s]?){3}\d{4}\b/g
+    card: /\b(?:\d{4}[-\s]?){3}\d{4}\b/g,
+    account: /\b\d{3,4}[\s-]\d{3,4}[\s-]\d{3,4}\b/g,
+    currency: /(?:₹|INR|USD|\$)\s?[\d,]+(?:\.\d{2})?/gi,
+    ifsc: /\b[A-Z]{4}0[A-Z0-9]{6}\b/g,
+    customer_id: /\b[A-Z]{2,8}[- ]\d{4,12}\b/g
   };
 
   /**
@@ -85,6 +90,50 @@
     });
 
     return findings;
+  }
+
+  function detectSensitiveDisplayRegions() {
+    const findings = [];
+    const selectors = [
+      ".pii-item",
+      ".pii-value",
+      ".profile-info",
+      ".balance-box",
+      ".balance-amount",
+      ".balance-sub",
+      ".card-preview",
+      "[data-pii]",
+      "[data-sensitive]"
+    ];
+
+    document.querySelectorAll(selectors.join(", ")).forEach((el) => {
+      const rect = el.getBoundingClientRect();
+      if (rect.width <= 0 || rect.height <= 0 || rect.width > window.innerWidth * 0.95) return;
+      findings.push({
+        type: "dom_display",
+        category: "sensitive_display",
+        x: Math.round(rect.left),
+        y: Math.round(rect.top),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+        label: "Sensitive displayed information"
+      });
+    });
+    return findings;
+  }
+
+  function compactRegions(regions) {
+    return regions.filter((region, index, all) => {
+      if (region.type === "vision_face") return true;
+      const area = region.width * region.height;
+      return !all.some((other, otherIndex) => {
+        if (otherIndex === index || other.type === "vision_face") return false;
+        const contains = other.x <= region.x && other.y <= region.y &&
+          other.x + other.width >= region.x + region.width &&
+          other.y + other.height >= region.y + region.height;
+        return contains && other.width * other.height > area * 1.2;
+      });
+    });
   }
 
   /**
@@ -337,12 +386,13 @@
     if (req.type === "GET_PAGE_PII_REGIONS") {
       const forms = detectFormPii();
       const texts = detectTextNodePii();
+      const displays = detectSensitiveDisplayRegions();
       const avatars = detectAvatarRegions();
-      const regions = [...forms, ...texts, ...avatars].filter((region, index, all) => all.findIndex((other) =>
+      const regions = compactRegions([...forms, ...texts, ...displays, ...avatars].filter((region, index, all) => all.findIndex((other) =>
         other.type === region.type &&
         other.x === region.x && other.y === region.y &&
         other.width === region.width && other.height === region.height
-      ) === index);
+      ) === index));
       sendResponse({
         regions,
         viewport: {
